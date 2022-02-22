@@ -1,0 +1,397 @@
+Wiki 
+manage_rdtech_4_backup
+Info
+Xen
+VM: Linux
+VM: Window
+LVS Install
+Ldirectord Install
+Ldirectord Config
+Heartbeat Install
+Pfsense
+
+Ansible Set
+Basic Set
+211.115.207.165
+211.115.207.168
+Deploy
+백업 장비를 생성하는 매뉴얼
+
+Info
+PFSense: https://203.248.23.246/index.php / admin / pfsense
+LVS VIP: 203.248.23.244
+LVS: 203.248.23.247 / root / sjaksahffk.
+XEN: 203.248.23.248 / root / sjaksahffk.
+VM Linux: 203.248.23.245 / root / sjaksahffk.
+VM Window: 203.248.23.249 / administrator / Ghtmxmdnpdl123!@#
+Xen
+Xen Center 8.2 Download - Host Add (Port 22 통신 가능해야함)
+
+Host 클릭 - Storage 탭 - New SR - NFS ISO
+
+SR NFS
+
+Share Name: 61.100.187.206:/home/iso
+NFS Version: NFSv4
+VM Add
+
+Linux (=CentOS) VM 1EA Install
+Window (=Window Server 2016) VM 1EA Install
+VM: Linux
+상단 방화벽 Outbound 허용 정책 확인 (203.248.23.245 -> *)
+
+기본 설정
+
+sudo vi /etc/sysconfig/selinux
+
+disabled
+
+sudo systemctl stop firewalld && sudo systemctl disable firewalld
+
+sudo yum install -y httpd
+
+sudo systemctl start httpd && sudo systemctl enable httpd
+
+sudo reboot
+
+curl 203.248.23.245
+Loopback 추가
+
+cat << EOF | tee /etc/sysconfig/network-scripts/ifcfg-lo:0
+DEVICE=lo:0
+IPADDR=203.248.23.244
+NETMASK=255.255.255.255
+ONBOOT=yes
+NAME=loopback
+
+EOF
+
+sudo systemctl restart network
+VM: Window
+상단 방화벽 Outbound 허용 정책 확인 (203.248.23.249 -> *)
+
+기본 설정
+
+서버 관리자 - 로컬 서버 - 원격 데스크탑 허용
+
+서버 관리자 - 관리 - 역할 및 기능 추가 - IIS 체크
+
+curl 203.248.23.249
+Loopback 추가
+
+제어판 - 하드웨어 - 장치 관리자
+
+최상단 우클릭 - 하드웨어 변경 사항 검색
+
+동작 - 레거시 하드웨어 추가 - 네트워크 어댑터
+
+Microsoft - 루프백 어댑터
+
+ncpa.cpl
+
+203.248.23.181/24
+## /24 나 /32 나 결과에 변함은 없다
+
+cmd (관리자 권한)
+
+netsh interface ipv4 set interface "lan" weakhostreceive=enabled
+netsh interface ipv4 set interface "lan" weakhostsend=enabled
+netsh interface ipv4 set interface "loopback" weakhostsend=enabled
+netsh interface ipv4 set interface "loopback" weakhostreceive=enabled
+## NIC 이름 lan / loopback 변경
+LVS Install
+Firewall
+
+sudo vi /etc/sysconfig/selinux
+
+disabled
+
+sudo systemctl stop firewalld && sudo systemctl disable firewalld
+VIP
+
+cat << EOF | tee /etc/sysconfig/network-scripts/ifcfg-enp1s0:0
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=enp1s0:0
+DEVICE=enp1s0:0
+ONBOOT=yes
+
+IPADDR=203.248.23.244
+PREFIX=25
+
+EOF
+
+sudo systemctl restart network
+LVS
+
+sudo yum install -y ipvsadm
+
+sudo mv /etc/sysctl.conf /etc/sysctl.conf.ori
+cat << EOF | sudo tee /etc/sysctl.conf
+net.ipv4.ip_forward=1
+EOF
+## enable IP forward
+
+sudo sysctl -p
+sudo sysctl -a | grep "net.ipv4.ip_forward"
+
+sudo touch /etc/sysconfig/ipvsadm
+
+sudo systemctl restart ipvsadm && sudo systemctl enable ipvsadm && sudo systemctl status ipvsadm
+Ldirectord Install
+sudo yum install -y ldirectord-3.9.5-3.1.x86_64.rpm
+
+sudo ipvsadm -C
+
+sudo systemctl stop ipvsadm
+sudo systemctl disable ipvsadm
+
+sudo systemctl start ldirectord
+sudo systemctl enable ldirectord
+Ldirectord Config
+cat << EOF | tee /etc/ha.d/ldirectord.cf
+checktimeout=25
+checkinterval=5
+autoreload=no
+logfile="/var/log/ldirectord.log"
+quiescent=no
+
+virtual=203.248.23.244:80
+        real=203.248.23.245:80 gate 100
+        real=203.248.23.249:80 gate 100
+        service=none
+        checktype=connect
+        scheduler=wlc
+        persistent=7200
+        protocol=tcp
+EOF
+
+sudo systemctl restart ldirectord
+
+sudo ipvsadm -Ln
+sudo ipvsadm -Ln --stats
+
+sudo ipvsadm -Lc
+
+curl 203.248.23.244
+Heartbeat Install
+Hostname
+
+vi /etc/sysconfig/network
+
+HOSTNAME=node-1
+HOSTNAME=node-2
+
+vi /etc/hosts
+
+203.248.23.187 node-1
+203.248.23.188 node-2
+Package
+
+# Gateway Server 2EA
+yum install -y epel-release
+yum install -y heartbeat
+yum install -y nmap telnet tcpdump net-tools
+
+rpm -q heartbeat -d
+## 설치 경로 확인
+ha.cf
+
+cd /usr/share/doc/heartbeat-3.0.4/
+cp ha.cf haresources authkeys /etc/ha.d/
+
+touch /var/log/ha-debug.log
+touch /var/log/ha.log
+
+cat << EOF | tee /etc/ha.d/ha.cf
+debugfile /var/log/ha-debug.log
+logfile /var/log/ha.log
+keepalive 2
+deadtime 30
+auto_failback on
+node node-1 node-2
+udpport 694
+ucast eth1 203.248.23.187
+
+EOF
+haresources
+
+cat << EOF | tee /etc/ha.d/haresources
+node-1 \
+  ldirectord::ldirectord.cf \
+  IPaddr2::203.248.23.181/25/eth1:0
+
+EOF
+authkeys
+
+cat << EOF | tee /etc/ha.d/authkeys
+auth 2
+2 sha1 test
+
+EOF
+
+chmod 600 /etc/ha.d/authkeys
+heartbeat
+
+service ldirectord stop
+chkconfig ldirectord off
+
+service heartbeat start
+chkconfig heartbeat on
+Pfsense
+Ansible Set
+Ansible 과 Pfsense 간의 통신을 위한 기본 세팅
+
+sudo yum install -y epel-release
+sudo yum install -y ansible
+
+ansible-galaxy collection install pfsensible.core
+Basic Set
+cat << EOF | tee hosts
+[pfsense]
+203.248.23.246 ansible_ssh_host=203.248.23.246 ansible_ssh_port=22 ansible_ssh_user=root ansible_password=pfsense
+EOF
+
+cat << EOF | tee ansible.cfg
+[defaults]
+inventory          = hosts
+host_key_checking  = False
+EOF
+211.115.207.165
+cat << EOF | tee 165.yml
+---
+- hosts: pfsense
+  gather_facts: true
+  connection: paramiko
+  tasks:
+  - pfsensible.core.pfsense_rule:
+      name: "80"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 80
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "65000-65001"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 65000-65001
+      after: "80"
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "65003-65005"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 65003-65005
+      after: "65000-65001"
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "65008-65009"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 65008-65009
+      after: "65003-65005"
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "65020-65021"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 65020-65021
+      after: "65008-65009"
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "1433"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 1433
+      after: "65020-65021"
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "49000-49001"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 49000-49001
+      after: "1433"
+      state: present
+
+  - pfsensible.core.pfsense_rule:
+      name: "49003-49004"
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 211.115.207.165
+      destination_port: 49003-49004
+      after: "49000-49001"
+      state: present
+
+
+
+
+
+
+
+
+
+  - pfsensible.core.pfsense_rule_separator:
+      name: 211.115.207.165
+      before: "80"
+      state: present
+      interface: opt1
+EOF
+211.115.207.168
+cat << EOF | tee playbook.yml
+---
+- hosts: pfsense
+  gather_facts: true
+  connection: paramiko
+  tasks:
+  - name: "test"
+    pfsensible.core.pfsense_rule:
+      name: 'Allow inbound port range'
+      action: pass
+      interface: opt1
+      ipprotocol: inet
+      protocol: tcp
+      source: any
+      destination: 1.1.1.1
+      destination_port: 4000-5000
+      after: 'test'
+      state: present
+EOF
+Deploy
+ansible-playbook 165.yml

@@ -1,0 +1,69 @@
+AWS WAF Service 종류
+  WAF
+  AWS Shield
+
+WAF 타입
+  Regional WAF (특정 리전 자원과 연동 가능)
+  Global WAF (Cloudfront 와 같이 글로벌 자원과 연동 가능)
+
+WAF 구성
+  WebACL
+  Rule Group
+  Rule
+
+WebACL 기본
+  AWS WAF 웹 ACL 용량 단위(WCU)
+  AWS WAF는 규칙 그룹 및 웹 ACL을 구성할 때 WCU 제한 적용
+  웹 ACL의 최대 용량은 1,500
+
+WebACL 사용
+  Associated AWS resources 에서 WAF 적용 대상 자원 선택 (1개만 선택 가능)
+
+Rule
+  Managed Rule
+    주로 AWS Managed Rule 사용. 써드 파티 룰셋도 구매하여 사용 가능
+    1500이상 사용하였을 때 그때 돈주고 사용해야됨
+
+  My Own Rule
+    관리자가 필요한대로 사용 가능
+
+CF Custom Header
+  Cloudfront 통과 시, 특정 헤더를 추가할 수 있다.
+  해당 헤더를 이용하여 Client -> Cloudfront -> WAF -> ALB -> EC2 구조에서 ALB 로 우회하는 트래픽 제한 가능
+  WCU: 2
+
+ALB X-forwarded-for
+  Proxy 특성을 지닌 리소스를 통과하면 x-forwarded-for 헤더가 추가된다.
+  해당 헤더를 이용하여 Proxy 를 통과하는 Client IP 추가 가능
+  WCU: 2
+
+custom response bodies
+  html 등등의 들어온 것에 대하여 에러정보 확인가능
+  
+
+
+WAF 실습
+
+GET /
+Host: stg-admin.otokki.com
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0
+X-Amz-Cf-Id: 2UZ1nHyoJGq_7pxrl3wN9pM-r9in1j-6aNz8tbMaJcJsvakZq7Pw7A==
+Connection: Keep-Alive
+Via: 2.0 925e7b77d00fe09d3e904612516a8235.cloudfront.net (CloudFront)
+X-Forwarded-For: 211.239.152.229
+Accept-Language: en-US,en;q=0.5
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+TE: trailers
+Accept-Encoding: gzip, deflate, br
+upgrade-insecure-requests: 1
+cache-control: max-age=0
+CloudFront-Is-Mobile-Viewer: false
+CloudFront-Is-Tablet-Viewer: false
+CloudFront-Is-SmartTV-Viewer: false
+CloudFront-Is-Desktop-Viewer: true
+CloudFront-Viewer-Country: KR
+CloudFront-Forwarded-Proto: https
+rsvp: 6b150dd080a9a2c0919a
+
+
+

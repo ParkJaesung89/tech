@@ -1,0 +1,24 @@
+AWS(Amazon Web Service) 기본 용어
+
+Region
+- aws에서 구성되 있는 IDC의 집합이며, 클라우드 서비스가 탑재되 있는 *지역* 으로 다수의 Availability Zone(AZ)으로 구성됨.
+- 같은 Region에서 하나의 AZ가 마비되어도 다른 AZ가 기능 수행할 수 있음
+- aws 사용자는 각 Region마다 별도의 클라우드망을 구성 가능
+- 전 세계의 주요 대도시에 분포되 있음.(ex: 서울, 도쿄, 등등...)
+
+Availability Zone
+- 가용 영역이라 불리우며, IDC 즉, 데이터 센터의 역할을 함.
+- 대게 3~4개의 AZ가 Region 마다 존재
+- 하나의 AZ가 문제되더라도 다른 AZ에서 기능 수행함.
+- 네트워크 구성에서는 하나의 서브넷이 하나의 AZ를 의미
+
+On-premise
+- 기존의 전통적인 IDC나 전산실 같은 물리적인 인프라를 의미
+
+Edge Location
+- CDN 서비스인 Cloudfront가 사용하는 캐시 서버
+- 전세계의 분포되있으며 Edge Location끼리 데이터 공유
+
+**탄력성(Elasticity)과 확장성(Scalability)**
+- 탄력성(Elasticity)은 AWS의 상징같은 서비스인 Autoscaling과 같이 단시간에 요구에 따른 사용자원을 늘리거나 줄이는 것을 의미
+- 확장성(Scalability)는 아키텍쳐적 관점에서 예상치를 충분히 감당할 수 있는 리소스를 보유하는 것을 의미

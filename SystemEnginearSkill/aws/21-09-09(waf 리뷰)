@@ -1,0 +1,144 @@
+지카 / 삼성플러스 aws 팀장님 리뷰
+
+1. alb origin cdn 있는 구조
+2. 클라우드 프론트에서 넘어오는 건 ip가 특정이 안됨.
+3. 방화벽에서 any open이 되어야 되는데 자기 ip만 열어둬서 클라우드 프론트 열어줌
+4. 다시 자기만 들어가야되는 상태임.
+5. fm은 회사 계발계에 대한것을 노출 안되게 하는것이 중요. 경쟁사에 노출될 수 있기 때문에.
+6. btc에 돈이 오가는 회사는 서비스 노출에 민감.
+7. 도메인 주고 도메인 관리하지 않고 ip만 줘서 관리.
+8. 계발계 보안 중요성에 대한것은 얘기해봐야 되며 IP로 제어하는것이 대부분
+
+
+클라우드 프론트 alb가 있는 인프라에서 어떻게 보안을 구성할 것인가가 맹점.
+
+
+##############################################################
+Waf(1)-Cloudfront-Waf(2)-alb-ec2 로 인프라 구성되 있는 구조
+
+***alb 와 elb , nlb 의 정의 및 차이 확인
+
+    1) Cloudfront는 edge 로 동작한다고 말함.
+    2) alb에서 ip를 막는다고하면 노드 - 노드로 통신하기에 바로 앞단에서의 ip만 알고 있기 때문에 들어오려는 유저의 ip를 차단하는 것이 불가능.
+        ***실제로는 alb에서 막는 기능은 없음***
+
+        리눅스에서 L7에서 웹 헤더에서 x포워드 오퍼 쪽에서 확인하면 바로전의 정보가 추가되며 처음 시작 ip부터 중첩되서 지나온 ip가 계속 추가됨.
+        ex) 재성 -> 정빈 -> 다혜 -> 범용
+         재성ip + 정빈ip + 다혜ip 로 된 정보를 확인 가능
+
+    3) xforward 오퍼 설정을해야 요청 ip를 확인가능
+    4) waf는 cloudfront는 global 서비스이며, 나머지 lb등은 리전 서비스
+
+waf -> ipset 에서 룰 적용
+
+web acl에서 허용, 차단 등 설정 가능
+
+
+alb가 0.0.0.0/0으로 설정 되있기 때문에 cloudfront앞에 waf잇어도 alb로 바로 들어오는 것들은 막을수 없기 때문에 바로 앞단에 waf를 추가함
+waf(1)-cloudfront(특정 헤더를 추가)-waf(2)(추가한 헤더의 값을 비교해서 매칭되면 넘김)-alb-ec2
+
+alb로 바로 들어올때 ip로 스캐닝해서 공격하는데
+ec2에 domain으로 설정해두면 domain에 대한 ip를 추적하면 alb가 아닌 cloudfront의 ip로 확인이 되기때문에 앞단 waf에 막을 수 있음.
+
+공격성을 줄이기 위해서 default 를 사용하지 못하게 하거나, 다른 용도로 설정하는게 좋음.
+
+
+
+cloudfront에서 오리진 넘어갈때 설정 시에 header name 설정시에 value 값(랜덤함수) 넣으면 넘어갈때 value값을 추가하여 넘김.
+후에 설정값에 origin 헤더값이 매칭해서 조건에 맞으면 allow 등등...됨
+
+
+
+samples test를 통해서 확인시 블록설정되어야 되는 ip가 allow되고 있을때 위 구조상에서는 가장 앞단 waf에서는 막혀있지만 해당 정보는 waf(2)에서
+의 정보이기에 waf(2) 바로 앞단에서의 cloudfront ip 정보라고 알수 있으며 proxy 서버의 ip일 가능성이 가장 큼
+
+aws는 name 기반으로 구축이 되있기 때문에 실제 ip를 nslookup으로 확인해보면
+ex) C:\Users\jaesung.park>nslookup
+기본 서버:  dc001.hwk.net
+Address:  10.30.103.97
+
+> 130.176.126.168
+서버:    dc001.hwk.net
+Address:  10.30.103.97
+
+이름:    server-130-176-126-168.icn51.r.cloudfront.net
+Address:  130.176.126.168
+
+이 정보중에 icn51 이부분은 항공 코드 값을 보여주며 저 값은 인천공항이며 이부분을 통해서 해당 국가가 어디인지 확인가능.
+
+=====================================================================================================================
+삼성플러스
+
+디렉토리 indexing 이 열려있어서 index of 로 디렉토리가 전체 보여주기 때문에 보안에 취약으로 인해 해커가 index of로 확인가능한 데이터들을
+다 수집하고 key 값을 빼냄.
+
+
+
+
+
+
+=============================================
+다혜님 정리
+
+1. 지카 - 차란차 
+
+이슈사항) ALB 에서 방화벽 설정을 하지 않아 cloudfront와 연동 불가함.
+
+AWS WAF(1) <==> Cloudfront <==> AWS WAF(2) <==> ALB <==> EC2
+형태로 구축
+
+WAF(1) - IP 로 차단, Client와 바로 접점.
+WAF(2) - Cloudfront를 지나서 Cloudfront에서 수동으로 할당한 헤더값으로 차단. -> ALB 가 any 오픈이기 때문에 cloudfront를 거치지 않고 ALB로 바로 접속하는 것을 차단 하기 위함.
+
+Cloudfront 
+- 특정 region이 아니라 global에 할당되므로 IP set 연결 설정시  global에서 찾을 것. 
+
+WAF 
+- Cloudfront, ALB, API 와 연동
+- ELB, NLB와는 연동 안됨. 
+
+AWS WAF > Web ACLs > Create web ACL
+- step 1 - acl 이름, CloudWatch이름,  aws resources 등 설정
+- step 2 - 0/1500 WCUs capacity 만큼의 rules 적용 가능, allow/block/count 
+- block/allow 등의 설정 시 중복 적용 될 수 있으므로 정책에 우선순위 적용 가능.
+- step 4
+request sampling opions : 모니터링 서비스 사용 여부 
+
+waf 적용 확인 
+- sampled requests 에서 allow, block 이력 확인 가능
+- waf(1)에서 ip로 차단되고 waf(2)에서 cloudfront의 헤더값을 갖고 있는 패킷만이 ec2 서비스로 허용된다. 따라서 sampled requests allow ip이력은 cloudfront node 의 ip 값만 찍혀 있어야하고 이 외의 ip가 allow되었다면 이는 proxy를 통해 특정 헤더를 해킹해 헤더를 달고 들어오는 타겟팅 공격이라고 판단할 수 있다. 
+
+===================================
+nslookup 130.176.126.168
+
+> 130.176.126.168
+서버:    dc001.hwk.net
+Address:  10.30.103.97
+
+이름:    server-130-176-126-168.icn51.r.cloudfront.net
+Address:  130.176.126.168
+
+icn51 -> IATA(항공코드) 같이 출력됨.-> 리죤 파악 가능. 
+===================================
+
+2. 삼성플러스 
+키노출 
+directory indexing 
+- 디렉토리 경로 모두 출력됨. 
+- 웹 conf 파일에서 심볼릭링크 취약 부분 옵션 제외 (단, 이 옵션을 제외하게 되면 심볼릭링크가 되어있는 디렉토리가 존재시 장애발생할 수 있음)
+
+***프로젝트의 pm 급이 없음***
+key 노출(Simple Email Service - ses)
+
+S3 권한 설정해야됨 - public access 로 되있는 걸 설정을 통해 변경필요
+그러나 퍼미션 설정 메뉴중에 여러 메뉴들이 있으며 그중에 ACL 리스트를 변경 해달라는 내용.
+
+smtp , api 방식으로 ses 설정
+
+smtp에서 발급된 키는 시큐리티 키가 있으며 그것을 변경하여 값을 적용해야됨.
+secret 키와 smtp 패스워드가 값이 다르기때문에 secret키에 특정 값으로 인코딩을 하면 smtp 패스워드 값이 나옴.
+ -> 아마존에서 이에 대한 기능제공함.
+
+summary에서 보안상 condition 조건을 걸어서 smtp에 대한 해킹시도를 방지하는데 도움이 된다.
+
+your account details -> SES Sending Limits 에서 맥스 send 값 등 고객과 이야기 하여 설정해준다

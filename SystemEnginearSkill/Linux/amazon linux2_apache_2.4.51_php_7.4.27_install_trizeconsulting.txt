@@ -1,0 +1,55 @@
+참고
+
+1. uw-imap 설치를 위해 epel 필요
+2. php 설치 옵션이 7.3 과는 다름(옵션 명이 바뀜)
+  - 없는 옵션 : --with-png-dir, --with-jpeg-dir, --enable-wddx, --with-freetype-dir, --with-gd, --enable-embedded-mysqli, --enable-zip, --with-libzip
+  - 추가 옵션 : --with-zip --with-zlib --with-mysqli --enable-gd --with-jpeg --with-freetype
+3. php make 시에 오류가 나는데 이 부분은 최소 메모리 채크에 걸려서 발생(서버 사양 올리거나 disable(--disable-fileinfo) 시켜라)
+  - cc: 내부 오류: 종료됨(cc1 프로그램) make: *** [ext/fileinfo/libmagic/apprentice.lo] 오류 1
+  - t3.micro 에서 t3.small 로 올리고 정상 컴파일
+4. 설치 환경
+  - OS : amazon linux 2 5.10 커널
+  - Apache : 2.4.51
+  - PHP : 7.4.27
+
+###### 사전 작업 #######
+## epel 활성화 ##
+sudo amazon-linux-extras install epel -y
+sudo yum-config-manager --enable epel
+
+## 아파치 compile 시 ##
+yum -y install gcc pcre-devel openssl-devel expat-devel 
+
+## php compile 시 ##
+yum -y install libxml2-devel sqlite-devel bzip2-devel libcurl-devel gdbm-devel libpng-devel libjpeg-turbo-devel freetype-devel gmp-devel gcc-c++ uw-imap uw-imap-devel uw-imap-utils uw-imap-static libicu-devel readline-devel libxslt-devel libtidy-devel oniguruma-devel libzip-devel
+
+## php libc-client library link ##
+ln -s /usr/lib64/libc-client.a /usr/lib/libc-client.a
+
+## 설치 파일 다운로드 ##
+cd /usr/local/src/
+wget --no-check-certificate https://archive.apache.org/dist/httpd/httpd-2.4.51.tar.gz
+wget --no-check-certificate https://www.php.net/distributions/php-7.4.27.tar.gz
+wget --no-check-certificate https://dlcdn.apache.org/apr/apr-util-1.6.1.tar.gz
+wget --no-check-certificate https://dlcdn.apache.org/apr/apr-1.7.0.tar.gz
+tar xvfz httpd-2.4.51.tar.gz
+tar xvfz php-7.4.27.tar.gz
+
+## Apache 설치 ##
+cp -pr apr-*.tar.gz httpd-2.4.51/srclib/
+cd /usr/local/src/httpd-2.4.51/srclib/
+tar xvfz apr-1.7.0.tar.gz
+tar xvfz apr-util-1.6.1.tar.gz
+rm -rf apr-*.tar.gz
+mv apr-1.7.0/ apr
+mv apr-util-1.6.1 apr-util
+cd /usr/local/src/httpd-2.4.51/
+./configure --prefix=/usr/local/apache-2.4.51 --enable-so --enable-mods-shared --enable-rewrite --enable-ssl --enable-mpm-shared --with-mpm=prefork --with-included-apr
+make
+make install
+
+## php 설치 ##
+cd /usr/local/src/php-7.4.27
+./configure '--prefix=/usr/local/php-7.4.27' '--with-apxs2=/usr/local/apache-2.4.51/bin/apxs' '--with-pdo-mysql=mysqlnd' '--with-mysqli=mysqlnd' '--enable-sysvshm=yes' '--enable-sysvsem=yes' '--enable-debug=no' '--with-zlib-dir' '--with-gdbm' '--enable-ftp' '--enable-mbstring' '--enable-sockets' '--enable-bcmath' '--enable-mbregex' '--enable-exif' '--enable-calendar' '--with-openssl' '--with-bz2' '--with-curl' '--with-gettext' '--with-gmp' '--with-imap' '--enable-intl' '--enable-mysqlnd' '--enable-pcntl' '--with-pdo-mysql' '--with-readline' '--enable-soap' '--with-tidy' '--with-xmlrpc' '--with-xsl' '--enable-opcache' '--with-kerberos' '--with-imap-ssl' '--with-zip' '--with-zlib' '--with-mysqli' '--enable-gd' '--with-jpeg' '--with-freetype'
+make
+make install

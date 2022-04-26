@@ -82,6 +82,15 @@ kubectl get nodes                                                               
 이런 에러가 발생시에 위 mkdir -p $HOME/.kube 여기부터 다시 설정하면 정상적으로 적용됨. 중간에 잘못 꼬인듯함.
 ## NotReady
 
+(Trouble) 설치 중 에러 발생시 클린 삭제 후 재 설치를 진행한다
+# All Node
+sudo systemctl stop kubelet
+sudo kubeadm reset -f
+
+sudo rm -rf ~/.kube
+sudo rm -rf /root/.kube
+sudo rm -rf /var/lib/etcd
+
 
 # Controller
 curl https://projectcalico.docs.tigera.io/manifests/calico.yaml -O

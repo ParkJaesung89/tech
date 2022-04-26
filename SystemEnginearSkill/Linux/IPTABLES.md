@@ -4,6 +4,100 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /sbin/zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf
 
 
@@ -43,3 +137,16 @@ ipchains -A input -i eth1 -s 192.168.1.0/24 -d 0/0 -j ACCEPT
 
 
 !wlsfh#201
+
+
+
+
+
+
+
+# iptables 관리
+vi /etc/sysconfig/iptables에 방화벽 룰 설정 파일존재
+설정 적용 후 해당 설정 바로 적용하려면 service iptables restart
+현재 설정을 저장해두려면 service iptables save
+save된 파일은 /etc/sysconfig/iptables.save에 저장됨
+이를 관리하기위해 iptables.save파일을 따로 복사해서 날짜별로 변경할때마다 관리하는게 좋음.

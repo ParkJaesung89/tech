@@ -1,0 +1,142 @@
+Server에 하드웨어 정보 확인하기 
+ Aug 10, 2020
+1. dmidecode(Desktop Management Interface) 사용하기
+dmidecode 를 사용하면 서버의 모든 하드웨어 정보를 확인할 수 있습니다.
+시스템정보가 모두 출력이 되기 때문에 내가 확인하고 싶은 정보만 보고 싶다면
+하기 옵션을 사용하시면 됩니다.
+
+$ dmidecode -h
+
+Usage: dmidecode [OPTIONS]
+Options are:
+ -d, --dev-mem FILE     Read memory from device FILE (default: /dev/mem)
+ -h, --help             Display this help text and exit
+ -q, --quiet            Less verbose output
+ -s, --string KEYWORD   Only display the value of the given DMI string
+ -t, --type TYPE        Only display the entries of given type
+ -u, --dump             Do not decode the entries
+     --dump-bin FILE    Dump the DMI data to a binary file
+     --from-dump FILE   Read the DMI data from a binary file
+ -V, --version          Display the version and exit
+
+
+(1-1) 모델명 확인
+$ dmidecode -s system-product-name
+(1-2) 메모리 뱅크 확인
+$ dmidecode -t 17 | egrep 'Memory|Size'
+(1-3) 최대 확장 가능한 메모리 확인
+$ dmidecode -t 16
+(1-4) 메모리제조사 확인
+$ dmidecode -t memory | grep Manufacturer
+(1-5) 시리얼 확인
+$ dmidecode | grep 'Serial Number' | head -1
+
+
+-t 옵션뒤에 확인하고 싶은 디바이스 type 을 입력해주면 됩니다.
+참고 -t 옵션값 (man페이지 참고)
+
+Type 	Information
+0 	 BIOS
+1 	 System
+2 	 Baseboard
+3 	 Chassis
+4 	 Processor
+5 	 Memory Controller
+6 	 Memory Module
+7 	 Cache
+8 	 Port Connector
+9 	 System Slots
+10	   On Board Devices
+12	   System Configuration Options
+13	   BIOS Language
+14	   Group Associations
+15	   System Event Log
+16	   Physical Memory Array
+17	   Memory Device
+18	   32-bit Memory Error
+19	   Memory Array Mapped Address
+20	   Memory Device Mapped Address
+21	   Built-in Pointing Device
+22	   Portable Battery
+23	   System Reset
+24	   Hardware Security
+25	   System Power Controls
+26	   Voltage Probe
+27	   Cooling Device
+28	   Temperature Probe
+29	   Electrical Current Probe
+30	   Out-of-band Remote Access
+31	   Boot Integrity Services
+32	   System Boot
+33	   64-bit Memory Error
+34	   Management Device
+35	   Management Device Component
+36	   Management Device Threshold Data
+37	   Memory Channel
+38	   IPMI Devices
+39	   Power Supply
+40	   Additional Information
+41	   Onboard Devices Extended Information
+42	   Management Controller Host Interface
+
+
+
+2. DELL, HP Server 에서 드라이브 구성 확인하기
+물리, 논리 드라이브 및 raid 구성의 확인이 가능한 명령어 입니다.
+Dell 서버는 megacli 를, hp 서버는 ssacli 를 이용하여 확인 가능합니다.
+
+
+
+(2-1) DELL 서버
+Megacli 설치 : Megacli Download
+
+
+
+디스크 요약정보
+
+$ /opt/MegaRAID/MegaCli/MegaCli64 -ShowSummary -aALL
+
+
+물리적 논리적 디스크 정보 모두 확인
+
+$ /opt/MegaRAID/MegaCli/MegaCli64 -LDPDInfo -aALL
+
+
+논리적 디스크 정보
+
+$ /opt/MegaRAID/MegaCli/MegaCli64 -LDInfo -Lall -aAll
+
+
+아답타 정보 확인
+
+$ /opt/MegaRAID/MegaCli/MegaCli64 -AdpAllInfo -aAll
+
+
+이벤트 로그 확인
+
+$ /opt/MegaRAID/MegaCli/MegaCli64 -AdpEventLog -GetEvents -f raid_event.log -aALL
+
+
+
+배터리 백업 유닛 정보BBU
+
+$ /opt/MegaRAID/MegaCli/MegaCli64 -AdpBbuCmd -aALL
+
+
+(2-2) HP 서버
+ssacli 설치 : ssacli Download
+
+
+
+$ ssacli ctrl all show detail
+$ ssacli ctrl all show config
+
+
+Physical drive 확인
+
+$ ssacli ctrl slot=0 pd all show
+
+
+Logical drive 확인
+
+$ ssacli ctrl slot=0 ld all show
